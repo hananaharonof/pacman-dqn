@@ -6,6 +6,8 @@ Author: Hanan Aharonof
 """
 
 import tensorflow as tf
+import numpy as np
+
 from loggingUtils import info
 from replayMemory import ReplayMemory
 
@@ -19,20 +21,28 @@ class DeepQNetwork(object):
 		self.m = params['m']  # The number of most recent frames to stack
 		self.actions = params['actions']  # The number of actions
 		self.replay_memory_size = params['replay_memory_size']  # Replay memory size
-		self.discount_factor = tf.constant(params['discount_factor'])
+		self.discount_factor = params['discount_factor']
+
+		self.s_t = tf.placeholder('float', [None, self.width, self.height, self.m], name='s_t')
+		self.q_t = tf.placeholder('float', [None], name='q_t')
+		self.a_t = tf.placeholder("float", [None, self.actions], name='a_t')
+		self.r_t = tf.placeholder("float", [None], name='r_t')
+		self.t_t = tf.placeholder("float", [None], name='t_t')
 
 		self.tf_session = tf.InteractiveSession()
 		self.replay_memory = self._init_replay_memory()
-		self.input, self.output = self._init_network()
-		self.cost_function = self._init_cost_function()
+		self.dqn_in, self.dqn_out = self._init_network()
+		self.cost = self._init_cost_function()
+		self.gdo = self._init_gradient_descent_optimizer()
+
+	def _init_gradient_descent_optimizer(self):
+		return tf.train.RMSPropOptimizer(.000001, decay=0.99, momentum=0.0, epsilon=1e-8).minimize(self.cost)
 
 	def _init_cost_function(self):
-		# Bellman equation
-		yj = tf.add(self.rewards, tf.multiply(1.0 - self.terminals, tf.multiply(self.discount_factor, self.q_t)))
-		# gives Q with action taken into consideration
-		self.Q_pred = tf.reduce_sum(tf.multiply(self.y, self.actions), reduction_indices=1)
-		# Loss function
-		self.cost = tf.reduce_sum(tf.square(tf.subtract(self.yj, self.Q_pred)))
+		discount = tf.constant(self.discount_factor)
+		y = tf.add(self.r_t, tf.multiply(1.0 - self.t_t, tf.multiply(discount, self.q_t)))
+		q_pred = tf.reduce_sum(tf.multiply(y, self.a_t), reduction_indices=1)
+		return tf.reduce_sum(tf.pow(tf.subtract(y, q_pred), 2))
 
 	def _init_replay_memory(self):
 		memory = ReplayMemory(self.replay_memory_size)
@@ -40,9 +50,9 @@ class DeepQNetwork(object):
 		return memory
 
 	def _init_network(self):
-		input_layer, output_layer = self._create_network()
+		dqn_in, dqn_out = self._create_network()
 		self._load_network()
-		return input_layer, output_layer
+		return dqn_in, dqn_out
 
 	def _create_network(self):
 		# Create the input layer (1'st)
@@ -91,5 +101,10 @@ class DeepQNetwork(object):
 		else:
 			info("No saved network weights found. Using random values.")
 
-	def train_network(self):
-		pass
+	def train_network(self, s_t, a_t, t_t, s_t1, r_t):
+		feed_dict = {self.s_t: s_t1}
+		q_t = self.tf_session.run(self.dqn_out, feed_dict=feed_dict)
+		q_t = np.amax(q_t, axis=1)
+		feed_dict = {self.s_t: s_t, self.q_t: q_t, self.a_t: a_t, self.t_t: t_t, self.r_t: r_t}
+		_, cost = self.tf_sessionss.run([self.gdo, self.cost], feed_dict=feed_dict)
+		return cost
