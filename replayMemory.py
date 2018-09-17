@@ -1,3 +1,13 @@
+"""
+	An implementation of a replay memory as described
+	at https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf.
+
+	The class can store new items into memory, save and/or load the entire memory
+	to/from disk and sample in batches from it.
+
+	Author: Hanan Aharonof
+"""
+
 from collections import deque
 import datetime
 import random
@@ -9,8 +19,7 @@ from loggingUtils import info
 
 DUMP_FILE_PATH = "replay_memory"
 TIME_FORMAT = '%d-%m-%Y_%H:%M:%S'
-FILE_EXT = 'rm'
-
+FILE_EXT = 'mem'
 
 class ReplayMemory(object):
 	def __init__(self, size):
@@ -30,7 +39,7 @@ class ReplayMemory(object):
 			os.mkdir(DUMP_FILE_PATH)
 
 		dump_file_name = '%s.%s' % (
-		datetime.datetime.fromtimestamp(time.time()).strftime(TIME_FORMAT), FILE_EXT)
+			datetime.datetime.fromtimestamp(time.time()).strftime(TIME_FORMAT), FILE_EXT)
 		dump_file = open(os.path.join(DUMP_FILE_PATH, dump_file_name), 'w')
 		pickle.dump(self.m, dump_file)
 
