@@ -7,63 +7,40 @@
 
 	Author: Hanan Aharonof
 """
+import random
+import numpy as np
 
 from collections import deque
-import datetime
-import random
-import pickle
-import time
-import os
 
-from loggingUtils import info
+from objectMapper import ObjectMapper
 
-DUMP_FILE_PATH = "replay_memory"
-TIME_FORMAT = '%d-%m-%Y_%H:%M:%S'
-FILE_EXT = 'mem'
+REPLAY_MEMORY_EXT = 'mem'
 
-class ReplayMemory(object):
+
+class ReplayMemory(ObjectMapper):
 	def __init__(self, size):
+		ObjectMapper.__init__(self, REPLAY_MEMORY_EXT)
 		self.size = size
 		self.m = deque()
 
-	def store(self, s_t, a_t, r_t, s_t1, terminal):
+	def add_memory(self, state, action, reward, new_state, terminal_state):
 		if len(self.m) > self.size:
 			self.m.popleft()
-		self.m.append((s_t, a_t, r_t, s_t1, terminal))
+		self.m.append((state, action, reward, new_state, terminal_state))
 
 	def sample(self, batch_size):
-		return random.sample(self.m, batch_size)
+		sample = random.sample(self.m, batch_size)
+		states = []
+		actions = []
+		rewards = []
+		new_states = []
+		terminals = []
 
-	def save(self):
-		if not os.path.exists(DUMP_FILE_PATH):
-			os.mkdir(DUMP_FILE_PATH)
+		for i in sample:
+			states.append(i[0])
+			actions.append(i[1])
+			rewards.append(i[2])
+			new_states.append(i[3])
+			terminals.append(i[4])
 
-		dump_file_name = '%s.%s' % (
-			datetime.datetime.fromtimestamp(time.time()).strftime(TIME_FORMAT), FILE_EXT)
-		dump_file = open(os.path.join(DUMP_FILE_PATH, dump_file_name), 'w')
-		pickle.dump(self.m, dump_file)
-
-		for f in os.listdir(DUMP_FILE_PATH):
-			if f == dump_file_name:
-				continue
-			path = os.path.join(DUMP_FILE_PATH, f)
-			if os.path.isfile(path) and f.endswith('.' + FILE_EXT):
-				os.remove(path)
-
-	def load(self):
-		if not os.path.exists(DUMP_FILE_PATH):
-			os.mkdir(DUMP_FILE_PATH)
-
-		files = [f for f in os.listdir(DUMP_FILE_PATH) if f.endswith("." + FILE_EXT)]
-		if len(files) == 0:
-			info("No saved replay memory file was found.")
-			return
-
-		files.sort(key=lambda x: datetime.datetime.strptime(x[:-3], TIME_FORMAT))
-		path = os.path.join(DUMP_FILE_PATH, files[len(files) - 1])
-		m = pickle.load(open(path, 'r'))
-		if type(m) is type(self.m):
-			self.m = m
-			info("Successfully loaded replay memory.")
-		else:
-			info("Failed to load replay memory from file %s." % path)
+		return np.array(states), np.array(actions), np.array(rewards), np.array(new_states), np.array(terminals)

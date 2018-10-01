@@ -39,6 +39,7 @@ from game import Directions
 from game import Actions
 from util import nearestPoint
 from util import manhattanDistance
+from dqnParameters import FRAME_WIDTH, FRAME_HEIGHT, LAYOUT
 import util, layout
 import sys, types, time, random, os
 
@@ -272,11 +273,11 @@ class ClassicGameRules:
     if state.isLose(): self.lose(state, game)
 
   def win( self, state, game ):
-    if not self.quiet: print "Pacman emerges victorious! Score: %d" % state.data.score
+    #if not self.quiet: print "Pacman emerges victorious! Score: %d" % state.data.score
     game.gameOver = True
 
   def lose( self, state, game ):
-    if not self.quiet: print "Pacman died! Score: %d" % state.data.score
+    #if not self.quiet: print "Pacman died! Score: %d" % state.data.score
     game.gameOver = True
 
   def getProgress(self, game):
@@ -523,10 +524,14 @@ def readCommand( argv ):
   noKeyboard = options.gameToReplay == None and (options.textGraphics or options.quietGraphics)
   pacmanType = loadAgent(options.pacman, noKeyboard)
   agentOpts = parseAgentArgs(options.agentArgs)
+  agentOpts[FRAME_WIDTH] = layout.getLayout(options.layout).width
+  agentOpts[FRAME_HEIGHT] = layout.getLayout(options.layout).height
+  agentOpts[LAYOUT] = options.layout
+
   if options.numTraining > 0:
     args['numTraining'] = options.numTraining
     if 'numTraining' not in agentOpts: agentOpts['numTraining'] = options.numTraining
-  pacman = pacmanType(**agentOpts) # Instantiate Pacman with agentArgs
+  pacman = pacmanType(agentOpts) # Instantiate Pacman with agentArgs
   args['pacman'] = pacman
 
   # Don't display training games
