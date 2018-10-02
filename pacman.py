@@ -42,6 +42,7 @@ from util import manhattanDistance
 from dqnParameters import FRAME_WIDTH, FRAME_HEIGHT, LAYOUT
 import util, layout
 import sys, types, time, random, os
+from loggingUtils import error
 
 ###################################################
 # YOUR INTERFACE TO THE PACMAN WORLD: A GameState #
@@ -587,7 +588,8 @@ def loadAgent(pacman, nographics):
     for modulename in moduleNames:
       try:
         module = __import__(modulename[:-3])
-      except ImportError:
+      except ImportError as e:
+        error("Cannot load module %s. Got error: %s." % (modulename, e))
         continue
       if pacman in dir(module):
         if nographics and modulename == 'keyboardAgents.py':

@@ -1,11 +1,13 @@
+import numpy as np
+
 from DQN import DQN
+from cappedMovingAverage import CappedMovingAverage
 from deepQNetwork import *
-from frameConvertor import getStateMatrices
+from frameConvertor import getStateMatrices, FrameConvertor
 from game import Agent, Directions
 from loggingUtils import debug
 from objectMapper import load
 from replayMemory import ReplayMemory, REPLAY_MEMORY_EXT
-
 
 def to_action(action_index):
 	if action_index == 0:
@@ -45,8 +47,8 @@ def _init_dqn_params(args):
 		else:
 			info("Successfully loaded saved parameters of model %s." % args[MODEL])
 
-	params[FRAME_WIDTH] = args[FRAME_WIDTH]  # * params[FRAME_CONVERTOR_FACTOR] TODO
-	params[FRAME_HEIGHT] = args[FRAME_HEIGHT]  # * params[FRAME_CONVERTOR_FACTOR] TODO
+	params[FRAME_WIDTH] = args[FRAME_WIDTH] * params[FRAME_CONVERTOR_FACTOR]
+	params[FRAME_HEIGHT] = args[FRAME_HEIGHT] * params[FRAME_CONVERTOR_FACTOR]
 	params[LAYOUT] = args[LAYOUT]
 	params[MODEL] = args[MODEL]
 	return params
@@ -70,6 +72,7 @@ class DQNAgent(Agent):
 		info("Initializing DQN Agent...")
 		self.params = _init_dqn_params(args)
 		self.replay_memory = _init_replay_memory(args)
+		self.frame_convertor = FrameConvertor(self.params[FRAME_CONVERTOR_FACTOR])
 
 		self.dqn = DQN(self.params)#DeepQNetwork(self.params)
 
@@ -82,6 +85,8 @@ class DQNAgent(Agent):
 		self.terminal_state = None
 		self.won = None
 		self.best_q = np.nan
+		self.last_100_wins_avg = CappedMovingAverage(100)
+		self.last_10_wins_avg = CappedMovingAverage(10)
 
 		debug("Using the following parameters: ")
 		for param in self.params.keys():
@@ -92,10 +97,7 @@ class DQNAgent(Agent):
 		if self.last_action is not None:
 			self._update_score(state)
 
-			# TODO: remove
-			self.last_state = np.copy(self.current_state)
-			self.current_state = getStateMatrices(state)
-			# self._update_frame_stack(state)
+			self._update_frame_stack(state)
 
 			self.replay_memory.add_memory(
 				self.last_state, self.last_action, self.last_reward, self.current_state, self.terminal_state)
@@ -131,22 +133,27 @@ class DQNAgent(Agent):
 		self.observationFunction(state)
 		if self.won:
 			self.params[WINS] += 1
+			self.last_10_wins_avg.add(1)
+			self.last_100_wins_avg.add(1)
+		else:
+			self.last_10_wins_avg.add(0)
+			self.last_100_wins_avg.add(0)
+
 		info(
-			"Episode #%d | Frames: %d | Wins: %d | Won: %s | Score: %d | Epsilon: %5f | Q: %5f" % (
+			"Episode #%d | Frames: %d | Wins: %d | Won: %s | Score: %d | Epsilon: %5f | Q: %5f | 100 Wins Avg: %3f | 10 Wins Avg: %3f" % (
 				self.params[EPISODES],
 				self.params[FRAMES],
 				self.params[WINS],
 				self.won,
 				state.getScore(),
 				self.params[RL_EPSILON_CURRENT],
-				self.best_q))
+				self.best_q,
+				self.last_100_wins_avg.avg(),
+				self.last_10_wins_avg.avg()))
 
 	def registerInitialState(self, state):  # Called with each new game
-		# self.frame_stack = None
-		# self._update_frame_stack(state)
-		# TODO
-		self.last_state = None
-		self.current_state = getStateMatrices(state)
+		self.frame_stack = None
+		self._update_frame_stack(state)
 		self.last_score = 0
 		self.last_reward = 0
 		self.terminal_state = False
@@ -155,44 +162,34 @@ class DQNAgent(Agent):
 
 	def getAction(self, state):
 		if np.random.rand() > self.params[RL_EPSILON_CURRENT]:
-			prediction = self.dqn.predict(
-				self.current_state.reshape(1, self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE]))
-			a_winner = np.argwhere(prediction == np.amax(prediction))
-			self.update_max_q(prediction[0][a_winner[0][1]])
-			if len(a_winner) > 1:
-				move = to_action(a_winner[np.random.randint(0, len(a_winner))][1])
-			else:
-				move = to_action(a_winner[0][1])
+			move = self.predict_action(state)
 		else:
-			move = to_action(np.random.randint(0, 4))
-			#move = legal_actions[np.random.randint(0, len(legal_actions))]
+			move = self.random_action(state)
 
 		self.last_action = self._to_action_vector(to_action_index(move))
-
 		if move not in state.getLegalActions(0):
 			move = Directions.STOP
+		return move
+
+	def random_action(self, state):
+		legal_actions = np.copy(state.getLegalActions(0))
+		if Directions.STOP in legal_actions:
+			legal_actions = np.delete(legal_actions, np.where(legal_actions == Directions.STOP)[0][0])
+		move = legal_actions[np.random.randint(0, len(legal_actions))]
+		return move
+
+	def predict_action(self, state):
+		prediction = self.dqn.predict(
+			self.current_state.reshape(
+				1, self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE]))
+		best_actions = np.argwhere(prediction == np.amax(prediction))
+		self.update_max_q(prediction[best_actions[0][0]])
+		if len(best_actions) > 1:
+			move = to_action(best_actions[np.random.randint(0, len(best_actions))][0])
+		else:
+			move = to_action(best_actions[0][0])
 
 		return move
-		# legal_actions = state.getLegalActions(0)
-		# q = np.nan
-		# if np.random.rand() > self.params[RL_EPSILON_CURRENT]:
-		# 	prediction = self.dqn.predict(
-		# 		self.current_state.reshape(1, self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE]))
-		# 	ordered_prediction = np.argsort(-prediction)
-		# 	selected_action = to_action(ordered_prediction[0][0])
-		# 	q = prediction[0][ordered_prediction[0][0]]
-		# else:
-		# 	if Directions.STOP in legal_actions:
-		# 		legal_actions.remove(Directions.STOP)
-		# 	selected_action_index = np.random.randint(0, len(legal_actions))
-		# 	selected_action = legal_actions[selected_action_index]
-		#
-		# self.last_action = self._to_action_vector(to_action_index(selected_action))
-		# if selected_action in legal_actions:
-		# 	if self._should_train():
-		# 		self.update_max_q(q)
-		# 	return selected_action
-		# return Directions.STOP
 
 	def update_max_q(self, q):
 		if np.isnan(self.best_q):
@@ -200,20 +197,19 @@ class DQNAgent(Agent):
 		elif q > self.best_q:
 			self.best_q = q
 
-	#
-	# def _update_frame_stack(self, state):
-	# 	frame = convert_frame(state.data)
-	# 	if self.frame_stack is None:
-	# 		self.frame_stack = np.stack((frame for i in xrange(0, self.params[M])))
-	# 	else:
-	# 		self.frame_stack = np.insert(self.frame_stack, 0, frame, axis=0)
-	# 		self.frame_stack = np.delete(self.frame_stack, self.params[M], axis=0)
-	#
-	# 	self.last_state = self.current_state
-	# 	self.current_state = np.swapaxes(
-	# 		self.frame_stack, 0, 2)
-	# 	if self.last_state is None:
-	# 		self.last_state = self.current_state
+	def _update_frame_stack(self, state):
+		frame = self.frame_convertor.convert_frame(state.data)
+		if self.frame_stack is None:
+			self.frame_stack = np.stack((frame for i in xrange(0, self.params[FRAME_STACK_SIZE])))
+		else:
+			self.frame_stack = np.insert(self.frame_stack, 0, frame, axis=0)
+			self.frame_stack = np.delete(self.frame_stack, self.params[FRAME_STACK_SIZE], axis=0)
+
+		self.last_state = self.current_state
+		self.current_state = np.swapaxes(
+			self.frame_stack, 0, 2)
+		if self.last_state is None:
+			self.last_state = self.current_state
 
 	def _update_score(self, state):
 		current_score = state.getScore()
