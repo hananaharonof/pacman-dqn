@@ -18,8 +18,8 @@ def to_action(action_index):
 		return Directions.NORTH
 	if action_index == 3:
 		return Directions.SOUTH
-
-	raise Exception('Action index %d is illegal' % action_index)
+	if action_index == 4:
+		return Directions.STOP
 
 
 def to_action_index(action):
@@ -31,8 +31,8 @@ def to_action_index(action):
 		return 2
 	if action == Directions.SOUTH:
 		return 3
-
-	raise Exception('Action %s is illegal' % action)
+	if action == Directions.STOP:
+		return 4
 
 
 def _init_dqn_params(args):
@@ -47,8 +47,8 @@ def _init_dqn_params(args):
 		else:
 			info("Successfully loaded saved parameters of model %s." % args[MODEL])
 
-	params[FRAME_WIDTH] = args[FRAME_WIDTH] * params[FRAME_CONVERTOR_FACTOR]
-	params[FRAME_HEIGHT] = args[FRAME_HEIGHT] * params[FRAME_CONVERTOR_FACTOR]
+	params[FRAME_WIDTH] = args[FRAME_WIDTH]  # * params[FRAME_CONVERTOR_FACTOR] TODO
+	params[FRAME_HEIGHT] = args[FRAME_HEIGHT]  # * params[FRAME_CONVERTOR_FACTOR] TODO
 	params[LAYOUT] = args[LAYOUT]
 	params[MODEL] = args[MODEL]
 	return params
@@ -74,7 +74,10 @@ class DQNAgent(Agent):
 		self.replay_memory = _init_replay_memory(args)
 		self.frame_convertor = FrameConvertor(self.params[FRAME_CONVERTOR_FACTOR])
 
-		self.dqn = DQN(self.params)#DeepQNetwork(self.params)
+		self.online_dqn = DeepQNetwork(self.params, 'online')
+		self.target_dqn = DeepQNetwork(self.params, 'target')
+
+		self.target_dqn.update(self.online_dqn)
 
 		self.current_state = None
 		self.last_state = None
@@ -97,7 +100,10 @@ class DQNAgent(Agent):
 		if self.last_action is not None:
 			self._update_score(state)
 
-			self._update_frame_stack(state)
+			# TODO: remove
+			self.last_state = np.copy(self.current_state)
+			self.current_state = getStateMatrices(state)
+			# self._update_frame_stack(state)
 
 			self.replay_memory.add_memory(
 				self.last_state, self.last_action, self.last_reward, self.current_state, self.terminal_state)
@@ -105,7 +111,12 @@ class DQNAgent(Agent):
 			if self._should_train():
 				states, actions, rewards, new_states, terminals = \
 					self.replay_memory.sample(self.params[REPLAY_MEMORY_SAMPLE_BATCH_SIZE])
-				self.dqn.train_network(states, actions, rewards, new_states, terminals)
+				#self.target_dqn.estimate_q_values_and_train(states, actions, rewards, new_states, terminals)
+				target_q_values = self.target_dqn.estimate_q_values(actions, new_states, rewards, terminals)
+				self.online_dqn.train(actions, target_q_values, rewards, states, terminals)
+
+			if self._should_update_target():
+				self.target_dqn.update(self.online_dqn)
 
 		self.params[FRAMES] += 1
 		self.params[RL_EPSILON_CURRENT] = max(
@@ -117,12 +128,15 @@ class DQNAgent(Agent):
 			info("Saving model [%s]..." % model)
 			self.params.save(model)
 			self.replay_memory.save(model)
-			self.dqn.save_network(model)
+			self.online_dqn.save(model)
 
 		return state
 
 	def _should_train(self):
 		return self.params[FRAMES] > self.params[FRAMES_BEFORE_TRAINING]
+
+	def _should_update_target(self):
+		return self.params[FRAMES] % self.params[TARGET_MODEL_UPDATE_INTERVAL_IN_FRAMES] == 0
 
 	def _should_save_model(self):
 		return self.params[FRAMES] % self.params[MODEL_SAVE_INTERVAL_IN_FRAMES] == 0
@@ -152,8 +166,11 @@ class DQNAgent(Agent):
 				self.last_10_wins_avg.avg()))
 
 	def registerInitialState(self, state):  # Called with each new game
-		self.frame_stack = None
-		self._update_frame_stack(state)
+		# self.frame_stack = None
+		# self._update_frame_stack(state)
+		# TODO
+		self.last_state = None
+		self.current_state = getStateMatrices(state)
 		self.last_score = 0
 		self.last_reward = 0
 		self.terminal_state = False
@@ -162,7 +179,7 @@ class DQNAgent(Agent):
 
 	def getAction(self, state):
 		if np.random.rand() > self.params[RL_EPSILON_CURRENT]:
-			move = self.predict_action(state)
+			move = self.predict_action()
 		else:
 			move = self.random_action(state)
 
@@ -178,8 +195,8 @@ class DQNAgent(Agent):
 		move = legal_actions[np.random.randint(0, len(legal_actions))]
 		return move
 
-	def predict_action(self, state):
-		prediction = self.dqn.predict(
+	def predict_action(self):
+		prediction = self.online_dqn.predict(
 			self.current_state.reshape(
 				1, self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE]))
 		best_actions = np.argwhere(prediction == np.amax(prediction))
@@ -232,3 +249,4 @@ class DQNAgent(Agent):
 		vector = np.zeros(self.params[NUM_OF_ACTIONS])
 		vector[index] = 1
 		return vector
+

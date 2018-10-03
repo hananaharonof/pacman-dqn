@@ -26,6 +26,7 @@ REPLAY_MEMORY_SAMPLE_BATCH_SIZE = 'replay_memory_sample_batch_size'
 # Network params
 OPTIMIZER_LEARNING_RATE = 'optimizer_rms_learning_rate'
 MODEL_SAVE_INTERVAL_IN_FRAMES = 'model_save_interval_in_frames'
+TARGET_MODEL_UPDATE_INTERVAL_IN_FRAMES = 'target_model_update_interval_in_frames'
 MODEL = 'model'
 L2_FILTER_SIZE = 'l2_filter_size'
 L2_FILTERS = 'l2_filters'
@@ -35,7 +36,11 @@ L3_FILTER_SIZE = 'l3_filter_size'
 L3_FILTERS = 'l3_filters'
 L3_DEPTH = 'l3_depth'
 L3_STRIDE = 'l3_stride'
-L4_RECTIFIER_UNITS = 'l4_rectifier_units'
+L4_FILTER_SIZE = 'l4_filter_size'
+L4_FILTERS = 'l4_filters'
+L4_DEPTH = 'l4_depth'
+L4_STRIDE = 'l4_stride'
+FC_RECTIFIER_UNITS = 'l4_rectifier_units'
 
 # Training progress
 GLOBAL_STEP = 'global_step'
@@ -45,8 +50,8 @@ FRAMES = 'frames'
 WINS = 'wins'
 
 DEFAULT_PARAMS = {
-	FRAME_STACK_SIZE: 4,
-	FRAME_CONVERTOR_FACTOR: 1,
+	FRAME_STACK_SIZE: 6,#4, TODO
+	FRAME_CONVERTOR_FACTOR: 2,
 	NUM_OF_ACTIONS: 4,
 	RL_DISCOUNT_FACTOR: 0.95,
 	RL_EPSILON_START: 1.0,
@@ -58,15 +63,20 @@ DEFAULT_PARAMS = {
 	REPLAY_MEMORY_SIZE: 100000,
 	REPLAY_MEMORY_SAMPLE_BATCH_SIZE: 32,
 	MODEL_SAVE_INTERVAL_IN_FRAMES: 1000000,
+	TARGET_MODEL_UPDATE_INTERVAL_IN_FRAMES: 100,
 	L2_FILTER_SIZE: 3,
-	L2_FILTERS: 16,
-	L2_DEPTH: 4,  # Correlated to FRAME_STACK_SIZE
+	L2_FILTERS: 8,#16,
+	L2_DEPTH: 6,#4,  # Correlated to FRAME_STACK_SIZE TODO
 	L2_STRIDE: 1,
 	L3_FILTER_SIZE: 3,
-	L3_FILTERS: 32,
-	L3_DEPTH: 16,
+	L3_FILTERS: 16,#32,
+	L3_DEPTH: 8,#16,
 	L3_STRIDE: 1,
-	L4_RECTIFIER_UNITS: 256,
+	L4_FILTER_SIZE: 4,
+	L4_FILTERS: 32,
+	L4_DEPTH: 16,
+	L4_STRIDE: 1,
+	FC_RECTIFIER_UNITS: 256,
 	MODEL: None,
 	GLOBAL_STEP: 0,
 	EPISODES: 0,
