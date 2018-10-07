@@ -33,12 +33,12 @@ def _generate_model_file_path(prefix):
 	return os.path.join(SAVE_FOLDER_NAME, model_file_name)
 
 class DeepQNetwork(object):
-	def __init__(self, params, name):
+	def __init__(self, params, name, session):
 		self.params = params
 		self.name = name
 
 		# 1. Start a TensorFlow session
-		self.session = tf.Session()
+		self.session = session
 
 		with tf.variable_scope(name) as scope:
 			# 2. Define network vars placeholders

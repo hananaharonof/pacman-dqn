@@ -22,7 +22,7 @@ class FrameConvertor(object):
 		self._draw_food(state.food.data, dr)
 		self._draw_capsules(state.capsules, state.layout.height, dr)
 		self._draw_agents(state.agentStates, state.layout.height, dr)
-		vector = np.array(im.convert('L'))
+		vector = np.array(im.convert('L'))/255.0
 		im.close()
 		return vector
 
@@ -31,26 +31,30 @@ class FrameConvertor(object):
 		for c_index, col in enumerate(walls):
 			for r_index, row in enumerate(col):
 				if row:
-					tlCords = (c_index * self.factor, size - r_index * self.factor)
-					brCords = (
-						(c_index + 1) * self.factor, size - (r_index + 1) * self.factor)
-					dr.rectangle((tlCords, brCords), fill='blue')
+					# tlCords = (c_index * self.factor, size - r_index * self.factor)
+					# brCords = (
+					# 	(c_index + 1) * self.factor, size - (r_index + 1) * self.factor)
+					# dr.rectangle((tlCords, brCords), fill='blue')
+					dr.point((c_index, r_index), fill='blue')
+
 
 	def _draw_food(self, food, dr):
 		size = len(food[0]) * self.factor
 		for c_index, col in enumerate(food):
 			for r_index, row in enumerate(col):
 				if row:
-					tlCords = (c_index * self.factor, size - r_index * self.factor)
-					brCords = (
-						(c_index + 1) * self.factor, size - (r_index + 1) * self.factor)
-					dr.rectangle((tlCords, brCords), fill='gray')
+					# tlCords = (c_index * self.factor, size - r_index * self.factor)
+					# brCords = (
+					# 	(c_index + 1) * self.factor, size - (r_index + 1) * self.factor)
+					# dr.rectangle((tlCords, brCords), fill='gray')
+					dr.point((c_index, r_index), fill='gray')
 
 	def _draw_capsules(self, capsules, height, dr):
 		for (i, j) in capsules:
-			tlCords = (i * self.factor, (height - 1 - j) * self.factor)
-			brCords = ((i + 1) * self.factor, (height - j) * self.factor)
-			dr.rectangle((tlCords, brCords), fill='white')
+			# tlCords = (i * self.factor, (height - 1 - j) * self.factor)
+			# brCords = ((i + 1) * self.factor, (height - j) * self.factor)
+			# dr.rectangle((tlCords, brCords), fill='white')
+			dr.point((i, j), fill='white')
 
 	def _draw_agents(self, agents, height, dr):
 		for agent in agents:
@@ -58,12 +62,15 @@ class FrameConvertor(object):
 			tlCords = (i * self.factor, (height - 1 - j) * self.factor)
 			brCords = ((i + 1) * self.factor, (height - j) * self.factor)
 			if agent.isPacman:
-				dr.rectangle((tlCords, brCords), fill='yellow')
+				# dr.rectangle((tlCords, brCords), fill='yellow')
+				dr.point((i, j), fill='yellow')
 			else:
 				if agent.scaredTimer == 0:
-					dr.rectangle((tlCords, brCords), fill='orange')
+					# dr.rectangle((tlCords, brCords), fill='orange')
+					dr.point((i, j), fill='orange')
 				else:
-					dr.rectangle((tlCords, brCords), fill='green')
+					# dr.rectangle((tlCords, brCords), fill='green')
+					dr.point((i, j), fill='green')
 
 
 def getStateMatrices(state):
