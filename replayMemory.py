@@ -8,9 +8,9 @@
 	Author: Hanan Aharonof
 """
 import random
-import numpy as np
-
 from collections import deque
+
+import numpy as np
 
 from objectMapper import ObjectMapper
 
@@ -20,27 +20,13 @@ REPLAY_MEMORY_EXT = 'mem'
 class ReplayMemory(ObjectMapper):
 	def __init__(self, size):
 		ObjectMapper.__init__(self, REPLAY_MEMORY_EXT)
-		self.size = size
-		self.m = deque()
+		self.m = deque(maxlen=size)
 
-	def add_memory(self, state, action, reward, new_state, terminal_state):
-		if len(self.m) > self.size:
-			self.m.popleft()
-		self.m.append((state, action, reward, new_state, terminal_state))
+	def add(self, exp):
+		self.m.append(exp)
 
 	def sample(self, batch_size):
-		sample = random.sample(self.m, batch_size)
-		states = []
-		actions = []
-		rewards = []
-		new_states = []
-		terminals = []
-
-		for i in sample:
-			states.append(i[0])
-			actions.append(i[1])
-			rewards.append(i[2])
-			new_states.append(i[3])
-			terminals.append(i[4])
-
-		return np.array(states), np.array(actions), np.array(rewards), np.array(new_states), np.array(terminals)
+		#return random.sample(self.m, batch_size)
+		curr_size = len(self.m)
+		index = np.random.choice(np.arange(curr_size), size=curr_size, replace=False)
+		return [self.m[i] for i in index]

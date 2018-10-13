@@ -1,12 +1,14 @@
 import numpy as np
+import time
 
-from DQN import DQN
+from DQNetwork import DQNetwork
 from cappedMovingAverage import CappedMovingAverage
 from deepQNetwork import *
-from frameConvertor import getStateMatrices, FrameConvertor
+from frameConvertor import convert_frame
+from frameStack import FrameStack
 from game import Agent, Directions
-from loggingUtils import debug
-from objectMapper import load
+from loggingUtils import debug, info
+from objectMapper import load, get_time
 from replayMemory import ReplayMemory, REPLAY_MEMORY_EXT
 
 def to_action(action_index):
@@ -43,10 +45,14 @@ def _init_dqn_params(args):
 		else:
 			info("Successfully loaded saved parameters of model %s." % args[MODEL])
 
-	params[FRAME_WIDTH] = args[FRAME_WIDTH] #* params[FRAME_CONVERTOR_FACTOR] TODO
-	params[FRAME_HEIGHT] = args[FRAME_HEIGHT]# * params[FRAME_CONVERTOR_FACTOR]
+	params[FRAME_WIDTH] = args[FRAME_WIDTH]
+	params[FRAME_HEIGHT] = args[FRAME_HEIGHT]
 	params[LAYOUT] = args[LAYOUT]
 	params[MODEL] = args[MODEL]
+
+	debug("Using the following parameters: ")
+	for param in params.keys():
+		debug("\t%s:%s" % (param, params[param]))
 	return params
 
 
@@ -65,20 +71,21 @@ def _init_replay_memory(args):
 
 class DQNAgent(Agent):
 	def __init__(self, args):
+		Agent.__init__(self)
+
 		info("Initializing DQN Agent...")
+		tf.reset_default_graph()
+		self.session = tf.Session()
+
 		self.params = _init_dqn_params(args)
 		self.replay_memory = _init_replay_memory(args)
-		self.frame_convertor = FrameConvertor(self.params[FRAME_CONVERTOR_FACTOR])
+		self.frame_stack = FrameStack(self.params[FRAME_STACK_SIZE], self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT])
+		self.dqn = DeepQNetwork(self.params, self.session, 'online')
+		#self.dqn = DQNetwork(self.params, self.session, 'online')
 
-		self.session = tf.Session()
-		self.online_dqn = DeepQNetwork(self.params, 'online', self.session)
-		if self.params[ENABLE_TARGET_DQN]:
-			self.target_dqn = DeepQNetwork(self.params, 'target', self.session)
-			self.target_dqn.update(self.online_dqn)
-
+		self.first_move = True
 		self.current_state = None
 		self.last_state = None
-		self.frame_stack = None
 		self.last_action = None
 		self.last_score = None
 		self.last_reward = None
@@ -89,54 +96,69 @@ class DQNAgent(Agent):
 		self.last_100_wins_avg = CappedMovingAverage(100)
 		self.last_100_reward_avg = CappedMovingAverage(100)
 
-		debug("Using the following parameters: ")
-		for param in self.params.keys():
-			debug("\t%s:%s" % (param, self.params[param]))
 		info("Done initializing DQN Agent.")
 
-	def observationFunction(self, state):
-		if self.last_action is not None:
-			self._update_score(state)
+	def registerInitialState(self, state):  # Called with each new game
+		self._update_frame_stack(state)
 
-			# TODO: remove
-			# self.last_state = np.copy(self.current_state)
-			# self.current_state = getStateMatrices(state)
+		self.first_move = True
+		self.last_score = 0
+		self.last_reward = 0
+		self.ep_reward = 0
+		self.terminal_state = False
+		self.won = True
+		self.best_q = np.nan
+
+	def observationFunction(self, state):
+		if not self.first_move:
+			self._update_score(state)
 			self._update_frame_stack(state)
 
-			self.replay_memory.add_memory(
-				self.last_state, self.last_action, self.last_reward, self.current_state, self.terminal_state)
+			self.replay_memory.add((
+				self.last_state,
+				self.last_action,
+				self.last_reward,
+				self.current_state,
+				self.terminal_state))
 
 			if self._should_train():
-				states, actions, rewards, new_states, terminals = \
-					self.replay_memory.sample(self.params[REPLAY_MEMORY_SAMPLE_BATCH_SIZE]-1)
-				np.append(states, [self.last_state], axis=0)
-				np.append(actions, [self.last_action], axis=0)
-				np.append(rewards, [self.last_reward], axis=0)
-				np.append(new_states, [self.last_state], axis=0)
-				np.append(terminals, [self.terminal_state], axis=0)
-
-				if self.params[ENABLE_TARGET_DQN]:
-					target_q_values = self.target_dqn.estimate_q_values(actions, new_states, rewards, terminals)
-					self.online_dqn.train(actions, target_q_values, rewards, states, terminals)
-				else:
-					self.online_dqn.estimate_q_values_and_train(states, actions, rewards, new_states, terminals)
-
-			if self._should_update_target() and self.params[ENABLE_TARGET_DQN]:
-				self.target_dqn.update(self.online_dqn)
+				self.dqn.estimate_q_values_and_train(*self._sample_mb())
 
 		self.params[FRAMES] += 1
 		self.params[RL_EPSILON_CURRENT] = max(
 			self.params[RL_EPSILON_END],
 			self.params[RL_EPSILON_START] - float(self.params[FRAMES]) / float(self.params[RL_EPSILON_FRAMES_DECAY]))
 
+		#self._save_model()
+		return state
+
+	def _sample_mb(self):
+		batch = self.replay_memory.sample(self.params[REPLAY_MEMORY_SAMPLE_BATCH_SIZE])
+		states_mb = []
+		actions_mb = []
+		rewards_mb = []
+		next_states_mb = []
+		terminals_mb = []
+		for i in xrange(len(batch)):
+			states_mb.append(batch[i][0])
+			actions_mb.append(batch[i][1])
+			rewards_mb.append(batch[i][2])
+			next_states_mb.append(batch[i][3])
+			terminals_mb.append(batch[i][4])
+		states_mb = np.array(states_mb)
+		actions_mb = np.array(actions_mb)
+		rewards_mb = np.array(rewards_mb)
+		next_states_mb = np.array(next_states_mb)
+		terminals_mb = np.array(terminals_mb)
+		return states_mb, actions_mb, rewards_mb, next_states_mb, terminals_mb
+
+	def _save_model(self):
 		if self._should_train() and self._should_save_model():
 			model = "%s_%s" % (self.params[LAYOUT], get_time())
 			info("Saving model [%s]..." % model)
 			self.params.save(model)
 			self.replay_memory.save(model)
-			self.online_dqn.save(model)
-
-		return state
+			#self.dqn.save(model) TODO
 
 	def _should_train(self):
 		return self.params[FRAMES] > self.params[FRAMES_BEFORE_TRAINING]
@@ -170,28 +192,15 @@ class DQNAgent(Agent):
 				self.last_100_wins_avg.avg(),
 				self.last_100_reward_avg.avg()))
 
-	def registerInitialState(self, state):  # Called with each new game
-		self.frame_stack = None
-		self._update_frame_stack(state)
-		# TODO
-		# self.last_state = None
-		# self.current_state = getStateMatrices(state)
-		self.last_score = 0
-		self.last_reward = 0
-		self.ep_reward = 0
-		self.terminal_state = False
-		self.won = True
-		self.best_q = np.nan
-
 	def getAction(self, state):
+		self.first_move = False
 		if np.random.rand() > self.params[RL_EPSILON_CURRENT]:
 			move = self.predict_action()
 		else:
 			move = self.random_action(state)
 
-		self.last_action = self._to_action_vector(to_action_index(move)) # TODO
+		self.last_action = self._to_action_vector(to_action_index(move))
 		if move not in state.getLegalActions(0):
-			#debug("Selected action %s is illegal" % move)
 			move = Directions.STOP
 		return move
 
@@ -203,9 +212,7 @@ class DQNAgent(Agent):
 		return move
 
 	def predict_action(self):
-		prediction = self.online_dqn.predict(
-			self.current_state.reshape(
-				1, self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE]))
+		prediction = self.dqn.predict(self.current_state)
 		best_actions = np.argwhere(prediction == np.amax(prediction))
 		self.update_max_q(prediction[best_actions[0][0]])
 		if len(best_actions) > 1:
@@ -222,18 +229,17 @@ class DQNAgent(Agent):
 			self.best_q = q
 
 	def _update_frame_stack(self, state):
-		frame = self.frame_convertor.convert_frame(state.data)
-		if self.frame_stack is None:
-			self.frame_stack = np.stack((frame for i in xrange(0, self.params[FRAME_STACK_SIZE])))
+		frame = convert_frame(state.data)
+		if self.first_move:
+			self.frame_stack.reset(frame)
+			self.last_state = np.zeros((self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[NUM_OF_ACTIONS]))
 		else:
-			self.frame_stack = np.insert(self.frame_stack, 0, frame, axis=0)
-			self.frame_stack = np.delete(self.frame_stack, self.params[FRAME_STACK_SIZE], axis=0)
-
-		self.last_state = self.current_state
-		self.current_state = np.swapaxes(
-			self.frame_stack, 0, 2)
-		if self.last_state is None:
+			self.frame_stack.add(frame)
 			self.last_state = self.current_state
+			self.current_state = self.frame_stack.get_stack()
+			if self.last_state is None:
+				self.last_state = np.zeros(
+					(self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[NUM_OF_ACTIONS]))
 
 	def _update_score(self, state):
 		current_score = state.getScore()

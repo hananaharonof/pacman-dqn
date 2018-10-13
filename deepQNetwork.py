@@ -33,7 +33,7 @@ def _generate_model_file_path(prefix):
 	return os.path.join(SAVE_FOLDER_NAME, model_file_name)
 
 class DeepQNetwork(object):
-	def __init__(self, params, name, session):
+	def __init__(self, params, session, name):
 		self.params = params
 		self.name = name
 
@@ -180,7 +180,8 @@ class DeepQNetwork(object):
 
 	def predict(self, new_state):
 		feed_dict = {
-			self.states: new_state,
+			self.states: new_state.reshape(
+				(1, self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE])),
 			self.q: np.zeros(1),
 			self.actions: np.zeros((1, self.params[NUM_OF_ACTIONS])),
 			self.rewards: np.zeros(1),
