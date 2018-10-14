@@ -10,6 +10,8 @@ from game import Agent, Directions
 from loggingUtils import debug, info
 from objectMapper import load, get_time
 from replayMemory import ReplayMemory, REPLAY_MEMORY_EXT
+from timeUtils import TimeIt
+
 
 def to_action(action_index):
 	if action_index == 0:
@@ -122,7 +124,9 @@ class DQNAgent(Agent):
 				self.terminal_state))
 
 			if self._should_train():
+				t = TimeIt()
 				self.dqn.estimate_q_values_and_train(*self._sample_mb())
+				t.measure()
 
 		self.params[FRAMES] += 1
 		self.params[RL_EPSILON_CURRENT] = max(

@@ -7,21 +7,23 @@ DEBUG = "DEBUG"
 ERROR = "ERROR"
 
 
-def info(msg):
-	log(msg, INFO)
+def info(msg, caller=None):
+	log(msg, INFO, caller)
 
 
-def debug(msg):
-	log(msg, DEBUG, 'yellow')
+def debug(msg, caller=None):
+	log(msg, DEBUG, caller, 'yellow')
 
 
-def error(msg):
-	log(msg, ERROR, 'red')
+def error(msg, caller=None):
+	log(msg, ERROR, caller, 'red')
 
 
-def log(msg, level, color='green'):
+def log(msg, level, caller=None, color='green'):
+	if caller is None:
+		caller = caller_name()
 	localtime = time.asctime(time.localtime(time.time()))
-	print colored("[%s] [%s] [%s] %s" % (localtime, level, caller_name(), msg), color)
+	print colored("[%s] [%s] [%s] %s" % (localtime, level, caller, msg), color)
 
 
 def caller_name():
