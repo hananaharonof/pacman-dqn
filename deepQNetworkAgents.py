@@ -6,7 +6,6 @@ from game import Agent, Directions
 from loggingUtils import debug, info
 from objectMapper import get_time, load
 from replayMemory import REPLAY_MEMORY_EXT, ReplayMemory
-from timeUtils import TimeIt
 
 
 def to_action(action_index):
@@ -79,7 +78,7 @@ class DQNAgent(Agent):
 		self.replay_memory = _init_replay_memory(args)
 		self.frame_stack = FrameStack(self.params[FRAME_STACK_SIZE], self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT])
 		self.dqn = DeepQNetwork(self.params, self.session, 'online')
-		#self.dqn = DQNetwork(self.params, self.session, 'online')
+		self.run_id = get_time()
 
 		self.first_move = True
 		self.current_state = None
@@ -125,9 +124,12 @@ class DQNAgent(Agent):
 		self.params[FRAMES] += 1
 		self.params[RL_EPSILON_CURRENT] = max(
 			self.params[RL_EPSILON_END],
-			self.params[RL_EPSILON_START] - float(self.params[FRAMES]) / float(self.params[RL_EPSILON_FRAMES_DECAY]))
+			min(
+				self.params[RL_EPSILON_START] - float(self.params[FRAMES] - self.params[FRAMES_BEFORE_TRAINING]) / float(self.params[RL_EPSILON_FRAMES_DECAY]),
+				self.params[RL_EPSILON_START]
+			))
 
-		#self._save_model()
+		self._save_model()
 		return state
 
 	def _sample_mb(self):
@@ -152,7 +154,7 @@ class DQNAgent(Agent):
 
 	def _save_model(self):
 		if self._should_train() and self._should_save_model():
-			model = "%s_%s" % (self.params[LAYOUT], get_time())
+			model = "%s_%s" % (self.params[LAYOUT], self.run_id)
 			info("Saving model [%s]..." % model)
 			self.params.save(model)
 			self.replay_memory.save(model)
@@ -160,9 +162,6 @@ class DQNAgent(Agent):
 
 	def _should_train(self):
 		return self.params[FRAMES] > self.params[FRAMES_BEFORE_TRAINING]
-
-	def _should_update_target(self):
-		return self.params[FRAMES] % self.params[TARGET_MODEL_UPDATE_INTERVAL_IN_FRAMES] == 0 and self.params[ENABLE_TARGET_DQN]
 
 	def _should_save_model(self):
 		return self.params[FRAMES] % self.params[MODEL_SAVE_INTERVAL_IN_FRAMES] == 0
@@ -230,14 +229,14 @@ class DQNAgent(Agent):
 		frame = convert_frame(state.data)
 		if self.first_move:
 			self.frame_stack.reset(frame)
-			self.last_state = np.zeros((self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[NUM_OF_ACTIONS]))
+			self.last_state = np.zeros((self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE]))
 		else:
 			self.frame_stack.add(frame)
 			self.last_state = self.current_state
 			self.current_state = self.frame_stack.get_stack()
 			if self.last_state is None:
 				self.last_state = np.zeros(
-					(self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[NUM_OF_ACTIONS]))
+					(self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE]))
 
 	def _update_score(self, state):
 		current_score = state.getScore()

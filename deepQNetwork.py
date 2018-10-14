@@ -189,11 +189,3 @@ class DeepQNetwork(object):
 		}
 
 		return self.session.run(self.action_predictor, feed_dict=feed_dict)[0]
-
-	def update(self, other_dqn):
-		copy_ops = [target_var.assign(other_dqn.vars()[var_name]) for var_name, target_var in self.trainable_vars.items()]
-		self.session.run(tf.group(*copy_ops))
-
-	def vars(self):
-		return self.trainable_vars
-
