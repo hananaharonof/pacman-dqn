@@ -13,6 +13,7 @@ import tensorflow as tf
 from loggingUtils import info
 from objectMapper import SAVE_FOLDER_NAME, get_time
 from dqnParameters import *
+from timeUtils import TimeIt
 
 FILE_EXT = 'net'
 
@@ -146,7 +147,6 @@ class DeepQNetwork(object):
 	def estimate_q_values_and_train(self, states, actions, rewards, new_states, terminals):
 		# 1. Estimate q-values
 		q = self.estimate_q_values(actions, new_states, rewards, terminals)
-
 		# 2. Train
 		return self.train(actions, q, rewards, states, terminals)
 

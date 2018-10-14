@@ -1,15 +1,11 @@
-import numpy as np
-import time
-
-from DQNetwork import DQNetwork
 from cappedMovingAverage import CappedMovingAverage
 from deepQNetwork import *
 from frameConvertor import convert_frame
 from frameStack import FrameStack
 from game import Agent, Directions
 from loggingUtils import debug, info
-from objectMapper import load, get_time
-from replayMemory import ReplayMemory, REPLAY_MEMORY_EXT
+from objectMapper import get_time, load
+from replayMemory import REPLAY_MEMORY_EXT, ReplayMemory
 from timeUtils import TimeIt
 
 
@@ -124,9 +120,7 @@ class DQNAgent(Agent):
 				self.terminal_state))
 
 			if self._should_train():
-				t = TimeIt()
 				self.dqn.estimate_q_values_and_train(*self._sample_mb())
-				t.measure()
 
 		self.params[FRAMES] += 1
 		self.params[RL_EPSILON_CURRENT] = max(
