@@ -1,5 +1,6 @@
-import numpy as np
 from collections import deque
+
+import numpy as np
 
 
 class FrameStack(object):
@@ -22,4 +23,7 @@ class FrameStack(object):
 
 	def get_stack(self):
 		return np.stack(self.stack, axis=2)
+
+	def blank(self):
+		return np.zeros((self.width, self.height, self.size))
 

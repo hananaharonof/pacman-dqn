@@ -50,5 +50,6 @@ def convert_frame(state):
 	_draw_capsules(state.capsules, dr)
 	_draw_agents(state.agentStates, dr)
 	vector = np.array(im.convert('L'))/255.0
+	vector = np.swapaxes(vector, 0, 1)
 	im.close()
 	return vector

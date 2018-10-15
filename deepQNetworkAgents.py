@@ -229,14 +229,13 @@ class DQNAgent(Agent):
 		frame = convert_frame(state.data)
 		if self.first_move:
 			self.frame_stack.reset(frame)
-			self.last_state = np.zeros((self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE]))
+			self.last_state = self.frame_stack.blank()
 		else:
 			self.frame_stack.add(frame)
 			self.last_state = self.current_state
 			self.current_state = self.frame_stack.get_stack()
 			if self.last_state is None:
-				self.last_state = np.zeros(
-					(self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT], self.params[FRAME_STACK_SIZE]))
+				self.last_state = self.frame_stack.blank()
 
 	def _update_score(self, state):
 		current_score = state.getScore()
