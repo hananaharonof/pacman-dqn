@@ -158,7 +158,7 @@ class DQNAgent(Agent):
 			info("Saving model [%s]..." % model)
 			self.params.save(model)
 			self.replay_memory.save(model)
-			#self.dqn.save(model) TODO
+			self.dqn.save(model)
 
 	def _should_train(self):
 		return self.params[FRAMES] > self.params[FRAMES_BEFORE_TRAINING]
@@ -229,7 +229,8 @@ class DQNAgent(Agent):
 		frame = convert_frame(state.data)
 		if self.first_move:
 			self.frame_stack.reset(frame)
-			self.last_state = self.frame_stack.blank()
+			self.last_state = self.frame_stack.get_stack()
+			self.current_state = self.last_state
 		else:
 			self.frame_stack.add(frame)
 			self.last_state = self.current_state
