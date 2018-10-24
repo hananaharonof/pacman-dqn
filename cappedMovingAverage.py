@@ -15,6 +15,8 @@ class CappedMovingAverage(object):
 		self.sum += value
 
 	def avg(self):
+		if len(self.values) == 0:
+			return 0.0
 		return self.sum * 1.0 / len(self.values)
 
 
