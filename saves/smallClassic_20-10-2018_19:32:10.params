@@ -33,10 +33,10 @@ p13
 I1000
 sS'frames'
 p14
-I7600000
+I27300000
 sS'episodes'
 p15
-I58739
+I193054
 sS'l3_stride'
 p16
 I1
@@ -79,7 +79,7 @@ p29
 I4
 sS'wins'
 p30
-I8079
+I51336
 sS'replay_memory_sample_batch_size'
 p31
 I64
