@@ -178,7 +178,7 @@ class DeepQNetwork(object):
 			model = get_time()
 		path = _generate_model_file_path(model)
 		self.session_saver.save(self.session, path)
-		self.print_weights()
+		#self.print_weights()
 
 	def print_weights(self):
 		debug("b1 = " + str(self.session.run(self.b1)))

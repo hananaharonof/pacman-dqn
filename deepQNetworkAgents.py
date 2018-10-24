@@ -92,6 +92,7 @@ class DQNAgent(Agent):
 		self.best_q = np.nan
 		self.last_100_wins_avg = CappedMovingAverage(100)
 		self.last_100_reward_avg = CappedMovingAverage(100)
+		self.wins_save_threshold = [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
 
 		info("Done initializing DQN Agent.")
 
@@ -153,12 +154,20 @@ class DQNAgent(Agent):
 		return states_mb, actions_mb, rewards_mb, next_states_mb, terminals_mb
 
 	def _save_model(self):
+		wins = self.last_100_wins_avg.avg()
 		if self._should_train() and self._should_save_model():
 			model = "%s_%s" % (self.params[LAYOUT], self.run_id)
-			info("Saving model [%s]..." % model)
-			self.params.save(model)
-			self.replay_memory.save(model)
-			self.dqn.save(model)
+		elif wins in self.wins_save_threshold:
+			model = "%s_%s_100_wins_%2f" % (self.params[LAYOUT], self.run_id, wins)
+			info("Reached a new wins threshold of %2f. Saving model..." % wins)
+			self.wins_save_threshold.remove(wins)
+		else:
+			return
+
+		info("Saving model [%s]..." % model)
+		self.params.save(model)
+		self.replay_memory.save(model)
+		self.dqn.save(model)
 
 	def _should_train(self):
 		return self.params[FRAMES] > self.params[FRAMES_BEFORE_TRAINING]
