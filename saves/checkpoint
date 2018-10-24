@@ -1,2 +1,6 @@
-model_checkpoint_path: "smallClassic_20-10-2018_19:32:10.net"
-all_model_checkpoint_paths: "smallClassic_20-10-2018_19:32:10.net"
+model_checkpoint_path: "smallGrid_24-10-2018_08:21:44.net"
+all_model_checkpoint_paths: "smallGrid_24-10-2018_08:21:44_100_wins_0.850000.net"
+all_model_checkpoint_paths: "smallGrid_24-10-2018_08:21:44_100_wins_0.900000.net"
+all_model_checkpoint_paths: "smallGrid_24-10-2018_08:21:44_100_wins_0.950000.net"
+all_model_checkpoint_paths: "smallGrid_24-10-2018_08:21:44_100_wins_1.000000.net"
+all_model_checkpoint_paths: "smallGrid_24-10-2018_08:21:44.net"
