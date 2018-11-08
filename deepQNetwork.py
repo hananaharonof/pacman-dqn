@@ -59,7 +59,6 @@ class DeepQNetwork(object):
 		self.trainable_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope.name)
 		self.trainable_vars = {var.name[len(scope.name):]: var for var in self.trainable_vars}
 
-
 		# 6. Define gradient descent optimizer
 		self.optimizer = tf.train.AdamOptimizer(self.params[OPTIMIZER_LEARNING_RATE]).minimize(self.loss)
 		self.session.run(tf.global_variables_initializer())
@@ -178,9 +177,10 @@ class DeepQNetwork(object):
 			model = get_time()
 		path = _generate_model_file_path(model)
 		self.session_saver.save(self.session, path)
-		#self.print_weights()
+		self.print_weights()
 
 	def print_weights(self):
+		pass
 		debug("b1 = " + str(self.session.run(self.b1)))
 		debug("w1 = " + str(self.session.run(self.w1)))
 		debug("b2 = " + str(self.session.run(self.b2)))
@@ -203,3 +203,10 @@ class DeepQNetwork(object):
 		}
 
 		return self.session.run(self.action_predictor, feed_dict=feed_dict)[0]
+
+	def assign(self, other_dqn):
+		copy_ops = [target_var.assign(other_dqn.vars()[var_name]) for var_name, target_var in self.trainable_vars.items()]
+		self.session.run(tf.group(*copy_ops))
+
+	def vars(self):
+		return self.trainable_vars

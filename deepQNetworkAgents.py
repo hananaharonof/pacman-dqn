@@ -78,6 +78,10 @@ class DQNAgent(Agent):
 		self.replay_memory = _init_replay_memory(args)
 		self.frame_stack = FrameStack(self.params[FRAME_STACK_SIZE], self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT])
 		self.dqn = DeepQNetwork(self.params, self.session, 'online')
+		self.target_dqn = DeepQNetwork(self.params, self.session, 'target')
+
+		self.target_dqn.assign(self.dqn)
+
 		self.run_id = get_time()
 
 		self.first_move = True
@@ -120,7 +124,12 @@ class DQNAgent(Agent):
 				self.terminal_state))
 
 			if self._should_train():
-				self.dqn.estimate_q_values_and_train(*self._sample_mb())
+				states_mb, actions_mb, rewards_mb, next_states_mb, terminals_mb = self._sample_mb()
+				target_q_values = self.target_dqn.estimate_q_values(actions_mb, next_states_mb, rewards_mb, terminals_mb)
+				self.dqn.train(actions_mb, target_q_values, rewards_mb, states_mb, terminals_mb)
+
+			if self._should_update_target_dqn():
+				self.target_dqn.assign(self.dqn)
 
 		self.params[FRAMES] += 1
 		self.params[RL_EPSILON_CURRENT] = max(
@@ -168,6 +177,9 @@ class DQNAgent(Agent):
 		self.params.save(model)
 		self.replay_memory.save(model)
 		self.dqn.save(model)
+
+	def _should_update_target_dqn(self):
+		return self.params[FRAMES] % self.params[TARGET_MODEL_UPDATE_INTERVAL_IN_FRAMES] == 0
 
 	def _should_train(self):
 		return self.params[FRAMES] > self.params[FRAMES_BEFORE_TRAINING]
