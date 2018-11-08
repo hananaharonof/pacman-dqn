@@ -181,16 +181,16 @@ class DeepQNetwork(object):
 
 	def print_weights(self):
 		pass
-		debug("b1 = " + str(self.session.run(self.b1)))
-		debug("w1 = " + str(self.session.run(self.w1)))
-		debug("b2 = " + str(self.session.run(self.b2)))
-		debug("w2 = " + str(self.session.run(self.w2)))
-		debug("b3 = " + str(self.session.run(self.b3)))
-		debug("w3 = " + str(self.session.run(self.w3)))
-		debug("b_fc = " + str(self.session.run(self.b_fc)))
-		debug("w_fc = " + str(self.session.run(self.w_fc)))
-		debug("b_fc2 = " + str(self.session.run(self.b_fc2)))
-		debug("w_fc2 = " + str(self.session.run(self.w_fc2)))
+		# debug("b1 = " + str(self.session.run(self.b1)))
+		# debug("w1 = " + str(self.session.run(self.w1)))
+		# debug("b2 = " + str(self.session.run(self.b2)))
+		# debug("w2 = " + str(self.session.run(self.w2)))
+		# debug("b3 = " + str(self.session.run(self.b3)))
+		# debug("w3 = " + str(self.session.run(self.w3)))
+		# debug("b_fc = " + str(self.session.run(self.b_fc)))
+		# debug("w_fc = " + str(self.session.run(self.w_fc)))
+		# debug("b_fc2 = " + str(self.session.run(self.b_fc2)))
+		# debug("w_fc2 = " + str(self.session.run(self.w_fc2)))
 
 	def predict(self, new_state):
 		feed_dict = {
