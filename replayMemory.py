@@ -26,7 +26,6 @@ class ReplayMemory(ObjectMapper):
 		self.m.append(exp)
 
 	def sample(self, batch_size):
-		#return random.sample(self.m, batch_size)
 		curr_size = len(self.m)
 		index = np.random.choice(np.arange(curr_size), size=batch_size, replace=False)
 		return [self.m[i] for i in index]

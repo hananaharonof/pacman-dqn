@@ -1,9 +1,12 @@
 import re
+import csv
 import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 
-with open("runs/smallClassic.out") as f:
+matplotlib.use('TkAgg')
+source = "runs/small-grid.out"
+
+
+with open(source) as f:
 	content = f.readlines()
 
 data = []
@@ -23,18 +26,16 @@ for line in content:
 x = []
 y = []
 
-for item in data:
-	if int(item[0]) > 10000:
-		break
-	if int(item[0]) % 100 == 0:
-		x.append(item[0])
-		y.append(item[1])
+with open(source + '.csv', 'wb') as csvfile:
+	writer = csv.writer(csvfile, dialect='excel')
+	for item in data:
+		if int(item[0]) > 100000:
+			break
+		writer.writerow([item[0], item[1], item[2]])
 
 
-plt.plot(x, y)
-plt.xlabel('Episodes')
-plt.ylabel('100 Games Win Rate')
-plt.show()
+
+
 
 
 
