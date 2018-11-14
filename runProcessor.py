@@ -3,7 +3,7 @@ import csv
 import matplotlib
 
 matplotlib.use('TkAgg')
-source = "runs/small-grid.out"
+source = "saves/minimaxClassic/run.out"
 
 
 with open(source) as f:

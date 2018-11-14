@@ -34,7 +34,7 @@ def _generate_model_file_path(prefix):
 
 
 class DeepQNetwork(object):
-	def __init__(self, params, session, name):
+	def __init__(self, params, session, name, load=True):
 		self.params = params
 		self.name = name
 
@@ -65,7 +65,8 @@ class DeepQNetwork(object):
 
 		# 5. Load saved network
 		self.session_saver = tf.train.Saver()
-		self._load_saved_network_data()
+		if load:
+			self._load_saved_network_data()
 
 		self.print_weights()
 

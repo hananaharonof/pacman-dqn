@@ -42,6 +42,8 @@ def _init_dqn_params(args):
 		else:
 			info("Successfully loaded saved parameters of model %s." % args[MODEL])
 
+	params[NO_TRAIN] = NO_TRAIN in args
+
 	params[FRAME_WIDTH] = args[FRAME_WIDTH]
 	params[FRAME_HEIGHT] = args[FRAME_HEIGHT]
 	params[LAYOUT] = args[LAYOUT]
@@ -78,9 +80,11 @@ class DQNAgent(Agent):
 		self.replay_memory = _init_replay_memory(args)
 		self.frame_stack = FrameStack(self.params[FRAME_STACK_SIZE], self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT])
 		self.dqn = DeepQNetwork(self.params, self.session, 'online')
-		self.target_dqn = DeepQNetwork(self.params, self.session, 'target')
+		self.target_dqn = self.dqn
 
-		self.target_dqn.assign(self.dqn)
+		if not self.params[NO_TRAIN]:
+			self.target_dqn = DeepQNetwork(self.params, self.session, 'target', False)
+			self.target_dqn.assign(self.dqn)
 
 		self.run_id = get_time()
 
@@ -163,6 +167,8 @@ class DQNAgent(Agent):
 		return states_mb, actions_mb, rewards_mb, next_states_mb, terminals_mb
 
 	def _save_model(self):
+		if self.params[NO_TRAIN]:
+			return
 		wins = self.last_100_wins_avg.avg()
 		if self._should_train() and self._should_save_model():
 			model = "%s_%s" % (self.params[LAYOUT], self.run_id)
@@ -179,13 +185,13 @@ class DQNAgent(Agent):
 		self.dqn.save(model)
 
 	def _should_update_target_dqn(self):
-		return self.params[FRAMES] % self.params[TARGET_MODEL_UPDATE_INTERVAL_IN_FRAMES] == 0
+		return not self.params[NO_TRAIN] and self.params[FRAMES] % self.params[TARGET_MODEL_UPDATE_INTERVAL_IN_FRAMES] == 0
 
 	def _should_train(self):
-		return self.params[FRAMES] > self.params[FRAMES_BEFORE_TRAINING]
+		return not self.params[NO_TRAIN] and self.params[FRAMES] > self.params[FRAMES_BEFORE_TRAINING]
 
 	def _should_save_model(self):
-		return self.params[FRAMES] % self.params[MODEL_SAVE_INTERVAL_IN_FRAMES] == 0
+		return not self.params[NO_TRAIN] and self.params[FRAMES] % self.params[MODEL_SAVE_INTERVAL_IN_FRAMES] == 0
 
 	def final(self, state):
 		self.terminal_state = True
