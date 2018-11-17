@@ -29,7 +29,7 @@ y = []
 with open(source + '.csv', 'wb') as csvfile:
 	writer = csv.writer(csvfile, dialect='excel')
 	for item in data:
-		if int(item[0]) > 100000:
+		if int(item[0]) > 20000:
 			break
 		writer.writerow([item[0], item[1], item[2]])
 
