@@ -2,4 +2,5 @@
 .idea/
 nohup.out
 venv
-
+saves/*
+!saves/*.tar.gz
