@@ -1,3 +1,9 @@
+"""
+	A utility function to convert a legal Pac-Man state into a pixel colored image
+
+	Author: Hanan Aharonof
+"""
+
 from collections import deque
 
 import numpy as np

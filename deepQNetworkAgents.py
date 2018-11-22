@@ -1,3 +1,9 @@
+"""
+	A DQN agent for Berkley's Pac-Man AI platform.
+
+	Author: Hanan Aharonof
+"""
+
 from cappedMovingAverage import CappedMovingAverage
 from deepQNetwork import *
 from frameConvertor import convert_frame
@@ -78,7 +84,8 @@ class DQNAgent(Agent):
 
 		self.params = _init_dqn_params(args)
 		self.replay_memory = _init_replay_memory(args)
-		self.frame_stack = FrameStack(self.params[FRAME_STACK_SIZE], self.params[FRAME_WIDTH], self.params[FRAME_HEIGHT])
+		self.frame_stack = FrameStack(self.params[FRAME_STACK_SIZE], self.params[FRAME_WIDTH],
+			self.params[FRAME_HEIGHT])
 		self.dqn = DeepQNetwork(self.params, self.session, 'online')
 		self.target_dqn = self.dqn
 
@@ -129,7 +136,8 @@ class DQNAgent(Agent):
 
 			if self._should_train():
 				states_mb, actions_mb, rewards_mb, next_states_mb, terminals_mb = self._sample_mb()
-				target_q_values = self.target_dqn.estimate_q_values(actions_mb, next_states_mb, rewards_mb, terminals_mb)
+				target_q_values = self.target_dqn.estimate_q_values(actions_mb, next_states_mb, rewards_mb,
+					terminals_mb)
 				self.dqn.train(actions_mb, target_q_values, rewards_mb, states_mb, terminals_mb)
 
 			if self._should_update_target_dqn():
@@ -139,7 +147,9 @@ class DQNAgent(Agent):
 		self.params[RL_EPSILON_CURRENT] = max(
 			self.params[RL_EPSILON_END],
 			min(
-				self.params[RL_EPSILON_START] - float(self.params[FRAMES] - self.params[FRAMES_BEFORE_TRAINING]) / float(self.params[RL_EPSILON_FRAMES_DECAY]),
+				self.params[RL_EPSILON_START] - float(
+					self.params[FRAMES] - self.params[FRAMES_BEFORE_TRAINING]) / float(
+					self.params[RL_EPSILON_FRAMES_DECAY]),
 				self.params[RL_EPSILON_START]
 			))
 
@@ -185,7 +195,8 @@ class DQNAgent(Agent):
 		self.dqn.save(model)
 
 	def _should_update_target_dqn(self):
-		return not self.params[NO_TRAIN] and self.params[FRAMES] % self.params[TARGET_MODEL_UPDATE_INTERVAL_IN_FRAMES] == 0
+		return not self.params[NO_TRAIN] and self.params[FRAMES] % self.params[
+			TARGET_MODEL_UPDATE_INTERVAL_IN_FRAMES] == 0
 
 	def _should_train(self):
 		return not self.params[NO_TRAIN] and self.params[FRAMES] > self.params[FRAMES_BEFORE_TRAINING]
@@ -288,4 +299,3 @@ class DQNAgent(Agent):
 		vector = np.zeros(self.params[NUM_OF_ACTIONS])
 		vector[index] = 1
 		return vector
-

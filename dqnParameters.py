@@ -1,7 +1,13 @@
+"""
+	A utility to organize and store parameters required by DQNAgent and DeepQNetwork
+
+	Author: Hanan Aharonof
+"""
+
 from objectMapper import ObjectMapper
 from loggingUtils import error
 
-# Pacman single frame params
+# Pac-Man single frame params
 
 FRAME_WIDTH = 'frame_width'
 FRAME_HEIGHT = 'frame_height'
