@@ -1,3 +1,9 @@
+"""
+	A utility to calculate moving average with a fix window size.
+
+	Author: Hanan Aharonof
+"""
+
 from collections import deque
 
 
@@ -18,5 +24,3 @@ class CappedMovingAverage(object):
 		if len(self.values) == 0:
 			return 0.0
 		return self.sum * 1.0 / len(self.values)
-
-

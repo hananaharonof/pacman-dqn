@@ -1,5 +1,5 @@
 """
-	An utility function to convert a legal Pacman state into a pixle colored image
+	A utility function to convert a legal Pac-Man state into a pixel colored image
 
 	Author: Hanan Aharonof
 """

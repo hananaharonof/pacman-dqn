@@ -1,3 +1,9 @@
+"""
+	A utility function save and load model to / from disk.
+
+	Author: Hanan Aharonof
+"""
+
 import datetime
 import os
 import pickle

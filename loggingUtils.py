@@ -1,3 +1,9 @@
+"""
+	A utility function for logging.
+
+	Author: Hanan Aharonof
+"""
+
 import inspect
 import time
 from termcolor import colored
